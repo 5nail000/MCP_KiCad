@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kicad-ai"
+version = "0.1.0"
+description = "Sandboxed MCP environment for AI-assisted KiCad schematic work"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "kicad-sch-api==0.5.6",
+    "mcp>=1.10.0,<2.0.0",
+    "fastmcp>=2.6.0,<3.0.0",
+    "pydantic>=2.0.0",
+]
+
+[project.scripts]
+doctor = "kicad_ai.cli:doctor_main"
+start-mcp = "kicad_ai.mcp.server:main"
+kicad-ai = "kicad_ai.cli:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+]
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+kicad_ai = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = ["-v", "--tb=short"]
+
+[tool.uv]
+package = true

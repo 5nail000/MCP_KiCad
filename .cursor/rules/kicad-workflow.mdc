@@ -1,0 +1,34 @@
+---
+description: Правила работы LLM с реальными проектами KiCad через MCP
+alwaysApply: true
+---
+
+# KiCad AI workflow
+
+Работай только с настоящими файлами `.kicad_pro` / `.kicad_sch` в этом workspace через MCP `kicad`.
+
+## Перед правкой
+
+1. Прочитай существующий проект (`list_projects`, `load_schematic`, `get_schematic_info`, `inspect_connectivity`).
+2. Не пересоздавай проект, если он уже есть.
+3. Не меняй reference designators без явной причины.
+4. Сохраняй существующие net names.
+5. Не выдумывай part number: сначала `search_symbols` / `get_symbol_info`.
+
+## Соединения
+
+- Логическое соединение: провод до пина, net label с тем же именем, power symbol, hierarchical label.
+- Графическое пересечение проводов **не** является соединением.
+- В точке T нужен `add_junction`.
+- Power symbol (`power:GND`, `power:+5V`) задаёт глобальную цепь по имени символа, это не обычная текстовая метка.
+
+## Безопасность
+
+- Пиши только в `projects/`.
+- Перед разрушительным изменением: backup → modify → save → `inspect_connectivity` → `run_erc`.
+- `remove_component` только с `confirm=true`.
+- Не удаляй компоненты молча.
+
+## После изменения
+
+Сообщи summary: какие компоненты/цепи изменились, dangling pins, ошибки ERC, путь к backup.
