@@ -26,11 +26,13 @@ def list_projects() -> list[dict[str, Any]]:
         return results
     for pro in sorted(projects_root.rglob("*.kicad_pro")):
         sch = pro.with_suffix(".kicad_sch")
+        pcb = pro.with_suffix(".kicad_pcb")
         results.append(
             {
                 "name": pro.stem,
                 "project": str(pro),
                 "schematic": str(sch) if sch.is_file() else None,
+                "pcb": str(pcb) if pcb.is_file() else None,
                 "relative": str(pro.parent.relative_to(workspace)).replace("\\", "/"),
             }
         )

@@ -11,7 +11,7 @@ class PathDenied(PermissionError):
     """Raised when a requested path is outside the allowed workspace trees."""
 
 
-WRITE_ROOTS = ("projects", "backups", "logs", "docs", "components")
+WRITE_ROOTS = ("projects", "backups", "logs", "docs", "components", "skidl_lab", "renders")
 READ_ROOTS = WRITE_ROOTS + ("src", "tests", "scripts", "tools")
 
 

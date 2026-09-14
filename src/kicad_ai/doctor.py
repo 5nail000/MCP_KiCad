@@ -91,6 +91,27 @@ def _check_git() -> Check:
     return Check("Git", result.returncode == 0, (result.stdout or "").strip())
 
 
+def _check_skidl() -> Check:
+    try:
+        from importlib.metadata import version as pkg_version
+
+        from kicad_ai.skidl_runtime import configure
+
+        configure()
+        import skidl
+
+        dist = pkg_version("skidl")
+        attr = getattr(skidl, "__version__", "unknown")
+        from skidl import KICAD10, get_default_tool
+
+        tool = get_default_tool()
+        detail = f"package {dist} (module attr {attr}) tool={tool} KICAD10={KICAD10}"
+        ok = str(tool) == str(KICAD10)
+        return Check("SKiDL", ok, detail, None if ok else "SKiDL default tool is not KICAD10")
+    except Exception as exc:  # noqa: BLE001
+        return Check("SKiDL", False, str(exc), "Run: uv sync")
+
+
 def _check_kicad_sch_api() -> Check:
     try:
         import kicad_sch_api as ksa
@@ -124,7 +145,7 @@ def _check_mcp_config(workspace: Path) -> Check:
 
 
 def _check_workspace(workspace: Path) -> Check:
-    required = ["projects", "projects/examples", "projects/user", "docs", "src/kicad_ai"]
+    required = ["projects", "projects/examples", "projects/user", "docs", "src/kicad_ai", "skidl_lab"]
     missing = [name for name in required if not (workspace / name).exists()]
     writable = os.access(workspace, os.W_OK)
     if missing:
@@ -132,6 +153,97 @@ def _check_workspace(workspace: Path) -> Check:
     if not writable:
         return Check("workspace", False, f"not writable: {workspace}")
     return Check("workspace", True, str(workspace))
+
+
+def _cli_help(*args: str) -> tuple[bool, str]:
+    install = find_kicad()
+    if install is None:
+        return False, "KiCad CLI not found"
+    try:
+        result = subprocess.run(
+            [str(install.kicad_cli), *args, "--help"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return False, str(exc)
+    text = (result.stdout or result.stderr or "").strip()
+    return result.returncode == 0, text.splitlines()[0] if text else f"exit {result.returncode}"
+
+
+def _render_checks() -> list[Check]:
+    checks: list[Check] = []
+    ok, detail = _cli_help("sch", "export", "svg")
+    checks.append(
+        Check(
+            "Schematic renderer",
+            ok,
+            detail if ok else "kicad-cli sch export svg missing",
+            None if ok else "Install KiCad 10 with kicad-cli schematic SVG export",
+        )
+    )
+    ok, detail = _cli_help("sch", "export", "pdf")
+    checks.append(
+        Check(
+            "PDF export",
+            ok,
+            detail if ok else "kicad-cli sch export pdf missing",
+            None if ok else "Install KiCad 10 with schematic PDF export",
+        )
+    )
+    ok, detail = _cli_help("pcb", "export", "svg")
+    checks.append(
+        Check(
+            "PCB renderer",
+            ok,
+            detail if ok else "kicad-cli pcb export svg missing",
+            None if ok else "Install KiCad 10 with pcb SVG export",
+        )
+    )
+    ok, detail = _cli_help("pcb", "render")
+    checks.append(
+        Check(
+            "3D renderer",
+            ok,
+            detail if ok else "kicad-cli pcb render missing",
+            None if ok else "Upgrade KiCad 10 so `kicad-cli pcb render` is available (PNG/JPEG 3D view)",
+        )
+    )
+    install = find_kicad()
+    if install is None:
+        checks.append(Check("3D model libraries", False, "KiCad not found", "Install KiCad 10"))
+    elif install.threed_dir.is_dir() and any(install.threed_dir.glob("*.3dshapes")):
+        count = len(list(install.threed_dir.glob("*.3dshapes")))
+        checks.append(Check("3D model libraries", True, f"{count} libraries in {install.threed_dir}"))
+    else:
+        checks.append(
+            Check(
+                "3D model libraries",
+                True,
+                f"missing or empty: {getattr(install, 'threed_dir', None)}",
+                "Reinstall KiCad 10 with 3D model packages",
+                True,
+            )
+        )
+    try:
+        import pymupdf  # noqa: F401
+        from PIL import Image  # noqa: F401
+
+        checks.append(Check("SVG support", True, "KiCad SVG export + PyMuPDF rasterizer"))
+        checks.append(Check("PNG conversion", True, "PyMuPDF + Pillow"))
+    except Exception as exc:  # noqa: BLE001
+        checks.append(
+            Check(
+                "PNG conversion",
+                False,
+                str(exc),
+                "Run: uv sync  (needs pymupdf and pillow)",
+            )
+        )
+        checks.append(Check("SVG support", ok, "KiCad can export SVG; PNG rasterizer missing"))
+    return checks
 
 
 def run_checks() -> list[Check]:
@@ -143,8 +255,10 @@ def run_checks() -> list[Check]:
         _check_uv(),
         _check_git(),
         _check_kicad_sch_api(),
+        _check_skidl(),
         _check_mcp_config(workspace),
         _check_workspace(workspace),
+        *_render_checks(),
         Check("kicad-ai", True, __version__),
     ]
 

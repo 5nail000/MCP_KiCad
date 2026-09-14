@@ -20,11 +20,14 @@ mcp = FastMCP(
     "kicad-ai",
     instructions=(
         "Work only on real KiCad projects under this workspace. "
+        "KiCad files under projects/ are the source of truth. "
         "Read an existing schematic before changing it. "
         "Never treat a visual wire crossing as an electrical connection. "
         "Use junctions, net labels, and power symbols correctly. "
         "Do not invent part numbers; search_symbols first. "
-        "Do not delete components without confirm=true."
+        "Do not delete components without confirm=true. "
+        "SKiDL must not overwrite .kicad_sch. After edits: backup, inspect_connectivity, validate_project. "
+        "Renders come from kicad-cli (SVG/PDF/3D PNG), never from AI image generation."
     ),
 )
 
@@ -278,12 +281,65 @@ def are_pins_connected(ref_a: str, pin_a: str, ref_b: str, pin_b: str) -> dict[s
 
 
 @mcp.tool()
-def run_erc() -> dict[str, Any]:
-    """Run KiCad ERC via kicad-cli on the saved schematic. Save first."""
+def run_erc(file_path: str | None = None) -> dict[str, Any]:
+    """Run KiCad ERC via kicad-cli sch erc on a saved .kicad_sch. Save first if using the loaded schematic."""
     try:
-        return schops.run_erc()
+        return schops.run_erc(file_path)
     except Exception as extra:
         return _fail("run_erc", extra, "run_erc")
+
+
+@mcp.tool()
+def run_drc(file_path: str | None = None) -> dict[str, Any]:
+    """Run KiCad DRC via kicad-cli pcb drc. If there is no .kicad_pcb, returns SKIPPED (not a fake PASS)."""
+    try:
+        return schops.run_drc(file_path)
+    except Exception as extra:
+        return _fail("run_drc", extra, "run_drc")
+
+
+@mcp.tool()
+def validate_project(path: str, run_skidl: bool = False, skidl_block: str | None = None) -> dict[str, Any]:
+    """KiCad ERC + DRC (skipped without PCB) + Python sanity. Optional SKiDL ERC on a lab block — never writes the KiCad schematic."""
+    try:
+        from kicad_ai.validate import validate_project as run_validate
+
+        return run_validate(path, run_skidl=run_skidl, skidl_block=skidl_block)
+    except Exception as extra:
+        return _fail("validate_project", extra, "validate_project")
+
+
+@mcp.tool()
+def list_skidl_blocks() -> dict[str, Any]:
+    """List reusable SKiDL blocks under skidl_lab/. These are not KiCad project schematics."""
+    try:
+        from kicad_ai.skidl_runtime import list_blocks
+
+        return _ok(blocks=list_blocks(), source_of_truth="projects/ KiCad files, not SKiDL")
+    except Exception as extra:
+        return _fail("list_skidl_blocks", extra, "list_skidl_blocks")
+
+
+@mcp.tool()
+def run_skidl_erc(block: str) -> dict[str, Any]:
+    """Run SKiDL ERC on a lab block. Does not modify .kicad_sch under projects/."""
+    try:
+        from kicad_ai.skidl_runtime import run_block_erc
+
+        return run_block_erc(block)
+    except Exception as extra:
+        return _fail("run_skidl_erc", extra, "run_skidl_erc")
+
+
+@mcp.tool()
+def export_skidl_netlist(block: str, output: str | None = None) -> dict[str, Any]:
+    """Write a SKiDL netlist only under skidl_lab/generated/. Refuses projects/ and .kicad_sch."""
+    try:
+        from kicad_ai.skidl_runtime import export_block_netlist
+
+        return export_block_netlist(block, output)
+    except Exception as extra:
+        return _fail("export_skidl_netlist", extra, "export_skidl_netlist")
 
 
 @mcp.tool()
@@ -302,6 +358,67 @@ def export_netlist(output: str | None = None) -> dict[str, Any]:
         return schops.export_netlist(output)
     except Exception as extra:
         return _fail("export_netlist", extra, "export_netlist")
+
+
+@mcp.tool()
+def render_schematic(
+    path: str,
+    view: str = "full",
+    theme: str | None = None,
+    quality: str | None = None,
+    force: bool = False,
+) -> dict[str, Any]:
+    """Export a real KiCad schematic render (SVG/PNG/PDF) via kicad-cli. Not an AI image."""
+    try:
+        from kicad_ai.render.schematic import render_schematic as do_render
+
+        return do_render(path, view=view, theme=theme, quality=quality, force=force)
+    except Exception as extra:
+        return _fail("render_schematic", extra, "render_schematic")
+
+
+@mcp.tool()
+def render_pcb(path: str, side: str = "top", force: bool = False) -> dict[str, Any]:
+    """2D PCB plot via kicad-cli pcb export svg. No .kicad_pcb → SKIPPED, not a fake image."""
+    try:
+        from kicad_ai.render.pcb import render_pcb as do_render
+
+        return do_render(path, side=side, force=force)
+    except Exception as extra:
+        return _fail("render_pcb", extra, "render_pcb")
+
+
+@mcp.tool()
+def render_pcb_3d(path: str, camera: str = "isometric", force: bool = False) -> dict[str, Any]:
+    """KiCad 3D viewer PNG (`kicad-cli pcb render`). Missing 3D models are warnings. No PCB → SKIPPED."""
+    try:
+        from kicad_ai.render.pcb import render_pcb_3d as do_render
+
+        return do_render(path, camera=camera, force=force)
+    except Exception as extra:
+        return _fail("render_pcb_3d", extra, "render_pcb_3d")
+
+
+@mcp.tool()
+def render_project(path: str, force: bool = False, theme: str | None = None, quality: str | None = None) -> dict[str, Any]:
+    """Render schematic (and PCB/3D if the board exists). Writes renders/<project>/ and render_report.json."""
+    try:
+        from kicad_ai.render.project_render import render_project as do_render
+
+        return do_render(path, theme=theme, quality=quality, force=force)
+    except Exception as extra:
+        return _fail("render_project", extra, "render_project")
+
+
+@mcp.tool()
+def get_render_report(path: str | None = None) -> dict[str, Any]:
+    """Return the last render_report.json (relative artifact paths)."""
+    try:
+        from kicad_ai.render.project_render import get_render_report as load_report
+
+        return load_report(path)
+    except Exception as extra:
+        return _fail("get_render_report", extra, "get_render_report")
 
 
 def main() -> None:

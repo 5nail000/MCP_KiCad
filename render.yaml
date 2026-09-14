@@ -1,0 +1,40 @@
+# KiCad-derived renders (not AI images). Source of truth remains projects/**.
+
+render:
+  dpi: 300
+  preview_dpi: 150
+  docs_dpi: 300
+  large_dpi: 600
+  margin: 15
+  theme: light
+  backend: kicad_cli
+
+pcb_render:
+  background: transparent
+  width: 1600
+  height: 900
+  quality: high
+
+automation:
+  render_after_validation: false
+
+# Named crops. A view is SKIPPED if none of its references exist on the sheet.
+schematic_views:
+  - name: power
+    description: Power input, fuse and DC-DC
+    references: ["F1", "U1"]
+  - name: controller
+    description: MCU / controller
+    references: ["U2", "U3", "ESP32"]
+  - name: sensors
+    description: Sensors
+    references: ["J_SENS", "U_SENS"]
+  - name: actuators
+    description: Valves, pump and servos
+    references: ["K1", "M1"]
+  - name: communication
+    description: Communication
+    references: ["U_USB", "J_UART"]
+  - name: indicator
+    description: 5V LED indicator
+    references: ["R1", "D1"]

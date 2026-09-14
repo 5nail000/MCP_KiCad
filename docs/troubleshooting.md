@@ -23,11 +23,23 @@ KICAD_SYMBOL_DIR=C:\Program Files\KiCad\10.0\share\kicad\symbols
    uv run doctor
    .\.venv\Scripts\python.exe tools\validation\test_mcp_stdio.py
    ```
-   Ожидается `OK tools/list: 25 tools`.
+   Ожидается `OK tools/list: 35 tools`.
 
-## ERC / BOM не запускаются
+## ERC / DRC / BOM не запускаются
 
-Нужен `kicad-cli`. Схему нужно **сохранить** на диск до `run_erc`. Если схема открыта в GUI, возможны `.lck` — MCP предупредит, но не будет делать вид, что всё чисто.
+Нужен `kicad-cli`. Схему нужно **сохранить** на диск до `run_erc` / `validate_project`. Если схемы открыты в GUI, возможны `.lck` — MCP предупредит, но не будет делать вид, что всё чисто.
+
+Нет `.kicad_pcb` — DRC возвращает `SKIPPED`, это не ошибка CLI и не успешная проверка платы. `render_pcb` / `render_pcb_3d` в том же случае тоже SKIPPED, без фейковой картинки. У примера mcp-test плата есть (`mcp-test.kicad_pcb`); у `projects/oxy/oxy` её нет — там DRC по-прежнему SKIPPED.
+
+## Render пустой / старый
+
+Источник — `kicad-cli`, не AI. PNG схемы получается из SVG KiCad. Если схема изменилась, hash в `renders/<project>/schematic/full.meta.json` не совпадёт и рендер пересоберётся (`--force` принудительно). Каталог `renders/` в gitignore.
+
+3D: `kicad-cli pcb render`. Нет модели у компонента — WARNING в отчёте, не ERROR.
+
+## SKiDL не находит символы
+
+Нужны переменные `KICAD10_SYMBOL_DIR` / `KICAD_SYMBOL_DIR` (их выставляет `kicad_ai.detect.require_kicad`). Каталог лабораторного кода — `skidl_lab/`, не `skidl/` (иначе перекрывается пакет PyPI).
 
 ## Схема не открывается в KiCad 10
 
@@ -39,7 +51,7 @@ KICAD_SYMBOL_DIR=C:\Program Files\KiCad\10.0\share\kicad\symbols
 
 ## PermissionError / PathDenied
 
-Путь вне whitelist. Рабочие файлы только под `projects/`.
+Путь вне whitelist. Запись: `projects/`, `backups/`, `logs/`, `docs/`, `components/`, `skidl_lab/`. SKiDL netlist — только `skidl_lab/generated/`.
 
 ## Python 3.14
 

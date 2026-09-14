@@ -12,7 +12,9 @@ from kicad_ai.backup import backup_project
 from kicad_ai.detect import require_kicad
 from kicad_ai.kicad_cli import export_bom as cli_export_bom
 from kicad_ai.kicad_cli import export_netlist as cli_export_netlist
+from kicad_ai.kicad_cli import run_drc as cli_run_drc
 from kicad_ai.kicad_cli import run_erc as cli_run_erc
+from kicad_ai.kicad_cli import skipped_drc
 from kicad_ai.kicad_cli import upgrade_schematic
 from kicad_ai.libraries import symbol_info
 from kicad_ai.logging_setup import get_logger
@@ -374,10 +376,25 @@ def are_pins_connected(ref_a: str, pin_a: str, ref_b: str, pin_b: str) -> dict[s
     }
 
 
-def run_erc() -> dict[str, Any]:
-    if SESSION.path is None:
+def run_erc(file_path: str | None = None) -> dict[str, Any]:
+    path = assert_allowed(file_path, write=False) if file_path else SESSION.path
+    if path is None:
         raise RuntimeError("Save the schematic before running kicad-cli ERC")
-    return cli_run_erc(SESSION.path)
+    return cli_run_erc(path)
+
+
+def run_drc(file_path: str | None = None) -> dict[str, Any]:
+    if file_path:
+        pcb = assert_allowed(file_path, write=False)
+    elif SESSION.path is not None:
+        pcb = SESSION.path.with_suffix(".kicad_pcb")
+    else:
+        raise RuntimeError("Pass a .kicad_pcb path or load a schematic first")
+    if pcb.suffix != ".kicad_pcb":
+        pcb = pcb.with_suffix(".kicad_pcb")
+    if not pcb.is_file():
+        return skipped_drc(reason="no .kicad_pcb next to the schematic", pcb=pcb)
+    return cli_run_drc(pcb)
 
 
 def export_bom(output: str | None = None) -> dict[str, Any]:

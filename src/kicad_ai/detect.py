@@ -19,6 +19,7 @@ class KiCadInstall:
     symbol_dir: Path
     footprint_dir: Path
     template_dir: Path
+    threed_dir: Path
 
 
 def _program_files() -> list[Path]:
@@ -85,6 +86,7 @@ def find_kicad() -> KiCadInstall | None:
         else root / "share" / "kicad" / "footprints"
     )
     template_dir = root / "share" / "kicad" / "template"
+    threed_dir = root / "share" / "kicad" / "3dmodels"
     version = probe_version(kicad_cli) or _parse_version_from_path(root)
     if not kicad_exe.is_file() or not kicad_cli.is_file():
         return None
@@ -96,6 +98,7 @@ def find_kicad() -> KiCadInstall | None:
         symbol_dir=symbol_dir,
         footprint_dir=footprint_dir,
         template_dir=template_dir,
+        threed_dir=threed_dir,
     )
 
 
@@ -120,6 +123,8 @@ def apply_library_env(install: KiCadInstall) -> None:
     os.environ.setdefault("KICAD_FOOTPRINT_DIR", str(install.footprint_dir))
     os.environ.setdefault("KICAD10_SYMBOL_DIR", str(install.symbol_dir))
     os.environ.setdefault("KICAD10_FOOTPRINT_DIR", str(install.footprint_dir))
+    os.environ.setdefault("KICAD_3DMODEL_DIR", str(install.threed_dir))
+    os.environ.setdefault("KICAD10_3DMODEL_DIR", str(install.threed_dir))
     bin_dir = str(install.kicad_exe.parent)
     path = os.environ.get("PATH", "")
     if bin_dir.lower() not in path.lower():

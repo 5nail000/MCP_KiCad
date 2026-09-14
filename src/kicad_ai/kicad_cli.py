@@ -1,4 +1,4 @@
-"""Thin wrappers around the real kicad-cli.exe (ERC, BOM, netlist, schematic upgrade)."""
+"""Thin wrappers around the real kicad-cli.exe (ERC, DRC, BOM, netlist, schematic upgrade)."""
 
 from __future__ import annotations
 
@@ -84,6 +84,9 @@ def run_erc(schematic: Path, *, output: Path | None = None) -> dict[str, Any]:
         except json.JSONDecodeError:
             payload["report_text"] = report.read_text(encoding="utf-8", errors="replace")
     payload["ok"] = result.returncode == 0 and not payload["violations"]
+    payload["skipped"] = False
+    payload["status"] = "PASS" if payload["ok"] else "FAIL"
+    payload["engine"] = "kicad-cli sch erc"
     return payload
 
 
@@ -117,6 +120,67 @@ def export_netlist(schematic: Path, *, output: Path | None = None, fmt: str = "k
         "returncode": result.returncode,
         "stdout": result.stdout,
         "stderr": result.stderr,
+    }
+
+
+def run_drc(pcb: Path, *, output: Path | None = None) -> dict[str, Any]:
+    board = assert_allowed(pcb, write=False)
+    if board.suffix != ".kicad_pcb":
+        raise ValueError("DRC input must be a .kicad_pcb file")
+    if not board.is_file():
+        raise FileNotFoundError(f"PCB not found: {board}")
+    report = output or board.with_suffix(".drc.json")
+    report = assert_allowed(report, write=True)
+    args = [
+        "pcb",
+        "drc",
+        "--format",
+        "json",
+        "--severity-warning",
+        "--severity-error",
+        "--output",
+        str(report),
+        str(board),
+    ]
+    schematic = board.with_suffix(".kicad_sch")
+    if schematic.is_file():
+        args.insert(-1, "--schematic-parity")
+    result = run_kicad_cli(args)
+    payload: dict[str, Any] = {
+        "success": True,
+        "skipped": False,
+        "status": "FAIL",
+        "returncode": result.returncode,
+        "report_path": str(report),
+        "stdout": result.stdout,
+        "stderr": result.stderr,
+        "violations": [],
+        "engine": "kicad-cli pcb drc",
+    }
+    if report.is_file():
+        try:
+            data = json.loads(report.read_text(encoding="utf-8"))
+            payload["report"] = data
+            payload["violations"] = _extract_violations(data)
+            payload["violations"].extend(_extract_unconnected(data))
+        except json.JSONDecodeError:
+            payload["report_text"] = report.read_text(encoding="utf-8", errors="replace")
+    payload["ok"] = result.returncode == 0 and not payload["violations"]
+    payload["status"] = "PASS" if payload["ok"] else "FAIL"
+    return payload
+
+
+def skipped_drc(*, reason: str, pcb: Path | None = None) -> dict[str, Any]:
+    """Real skip when there is no PCB — not a fake PASS."""
+    return {
+        "success": True,
+        "skipped": True,
+        "ok": True,
+        "status": "SKIPPED",
+        "reason": reason,
+        "pcb": str(pcb) if pcb else None,
+        "violations": [],
+        "engine": "kicad-cli pcb drc",
     }
 
 
@@ -157,4 +221,21 @@ def _extract_violations(data: Any) -> list[dict[str, Any]]:
     elif isinstance(data, list):
         for item in data:
             found.extend(_extract_violations(item))
+    return found
+
+
+def _extract_unconnected(data: Any) -> list[dict[str, Any]]:
+    found: list[dict[str, Any]] = []
+    if not isinstance(data, dict):
+        return found
+    for item in data.get("unconnected_items") or []:
+        if not isinstance(item, dict):
+            continue
+        found.append(
+            {
+                "severity": item.get("severity") or "error",
+                "type": item.get("type") or "unconnected_items",
+                "description": item.get("description") or item.get("message") or "unconnected item",
+            }
+        )
     return found

@@ -78,6 +78,14 @@ def test_smoke_create_connect_save_reload_validate() -> None:
     assert Path(net["path"]).is_file()
 
 
+def test_whitelist_allows_skidl_lab_generated() -> None:
+    from kicad_ai.config import get_workspace
+
+    path = get_workspace() / "skidl_lab" / "generated" / "probe.net"
+    allowed = assert_allowed(path, write=True)
+    assert allowed.name == "probe.net"
+
+
 def test_remove_component_requires_confirm() -> None:
     create_mcp_test_project(name="smoke-tmp", location="user", overwrite=True)
     try:

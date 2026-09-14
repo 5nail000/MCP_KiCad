@@ -24,11 +24,14 @@ alwaysApply: true
 
 ## Безопасность
 
-- Пиши только в `projects/`.
-- Перед разрушительным изменением: backup → modify → save → `inspect_connectivity` → `run_erc`.
+- Пиши схемы проекта только в `projects/`. SKiDL-артефакты только в `skidl_lab/generated/`.
+- Перед разрушительным изменением: backup → modify → save → `inspect_connectivity` → `validate_project`.
+- KiCad файлы в `projects/` — источник истины. SKiDL не перезаписывает `.kicad_sch`.
+- Нет `.kicad_pcb` → DRC = SKIPPED, не PASS. У `projects/examples/mcp-test` тестовая плата уже есть.
+- Картинки: `render_schematic` / `render_pcb` / `render_pcb_3d` через kicad-cli. Не рисуй схему сам и не используй image generation.
 - `remove_component` только с `confirm=true`.
 - Не удаляй компоненты молча.
 
 ## После изменения
 
-Сообщи summary: какие компоненты/цепи изменились, dangling pins, ошибки ERC, путь к backup.
+Сообщи summary: какие компоненты/цепи изменились, dangling pins, ERC, статус DRC (включая SKIPPED), путь к backup. Картинки — только после явного `render_*`.

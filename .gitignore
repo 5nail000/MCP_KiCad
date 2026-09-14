@@ -17,9 +17,20 @@ commit-message.txt
 
 # Logs and backups (regenerated locally)
 logs/
+cli.log
 backups/
 projects/user/smoke-tmp/
 *.erc.json
+*.drc.json
+skidl_lab/generated/**
+!skidl_lab/generated/.gitkeep
+skidl_lab/**/__pycache__/
+*.erc
+*_skidl.cfg
+
+# Generated KiCad renders (PNG/SVG/PDF). Rebuilt via kicad-ai render.
+renders/**
+!renders/.gitkeep
 
 # KiCad temporary / cache / lock
 *-bak
