@@ -41,9 +41,18 @@ https://ozon.ru/t/NsOjony
 
 Footprint разъёмов: `Connector_JST:JST_XH_B2B-XH-A_1x02_P2.50mm_Vertical` (шаг 2.50 мм ≈ XH2.54).
 
-## Что проверить до платы
+## PCB (`projects/oxy/oxy/oxy.kicad_pcb`)
 
-- Реальный Vin в системе (пример на схеме: 12 V).
+Тестовая плата-адаптер 55×30 мм (smoke, не под Gerber): F1, J1/J2 (XH2.54), R1/D1, раздельные GND/GNDA. Пересборка:
+
+```powershell
+& "C:\Program Files\KiCad\10.0\bin\python.exe" scripts\build_oxy_pcb.py
+uv run kicad-ai validate projects\oxy\oxy
+```
+
+## Что проверить до производства
+
+- Реальный Vin в системе (пример на схеме: 12 V; питание на F1.1 / «12V IN»).
 - Ток нагрузки ≤ заявленных 5 W / 5 V.
-- Не замыкать GND и GNDA.
+- Не замыкать GND и GNDA на плате и в монтаже.
 - Производитель/AMR/изоляция (кВ) — только из реального datasheet модуля, не из названия на Ozon.

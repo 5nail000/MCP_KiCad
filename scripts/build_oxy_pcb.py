@@ -247,13 +247,16 @@ def build() -> Path:
         nets["Net-(J1-Pin_1)"],
         [_pad(f1, "2").GetPosition(), _pad(j1, "1").GetPosition()],
     )
+    # J2 rot90: pad1 +5V at (39,13), pad2 GNDA at (39,10.5) — exit east/west, never share x=39 bus
     _route(
         board,
         nets["+5V"],
         [
             _pad(j2, "1").GetPosition(),
             _mm_point(44.0, 13.0),
-            _mm_point(44.0, 9.0),
+            _mm_point(44.0, 7.0),
+            _mm_point(46.175, 7.0),
+            _mm_point(46.175, 9.0),
             _pad(r1, "1").GetPosition(),
         ],
     )
@@ -262,8 +265,8 @@ def build() -> Path:
         nets["Net-(D1-A)"],
         [
             _pad(r1, "2").GetPosition(),
-            _mm_point(49.0, 9.0),
-            _mm_point(49.0, 17.2125),
+            _mm_point(51.0, 9.0),
+            _mm_point(51.0, 17.2125),
             _pad(d1, "2").GetPosition(),
         ],
     )
@@ -272,9 +275,9 @@ def build() -> Path:
         nets["GNDA"],
         [
             _pad(j2, "2").GetPosition(),
-            _mm_point(44.0, 10.5),
-            _mm_point(44.0, 20.0),
-            _mm_point(47.0, 20.0),
+            _mm_point(34.0, 10.5),
+            _mm_point(34.0, 21.0),
+            _mm_point(47.0, 21.0),
             _pad(d1, "1").GetPosition(),
         ],
     )

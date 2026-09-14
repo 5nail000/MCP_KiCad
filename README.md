@@ -105,7 +105,7 @@ uv run kicad-ai example
 5. `validate_project` (ERC + DRC; нет PCB → DRC SKIPPED)
 6. Показать summary
 
-Проекты пользователя кладите в `projects/user/`. Не пишите вне workspace: MCP это запретит.
+Проекты пользователя кладите в `projects/user/`. Каталог `projects/` в `.gitignore` — схемы и платы не попадают в git, только локально. Не пишите вне workspace: MCP это запретит.
 
 ## 9. Backup and rollback
 
@@ -137,14 +137,19 @@ Python-тесты: `tests/test_electrical.py` (KiCad ERC/DRC/netlist) и `skidl_
 
 MCP **не создаёт** `.kicad_pcb`: ни автоматически после схемы, ни по запросу из Cursor. `create_project` пишет только `.kicad_pro` + `.kicad_sch`. Tool `run_drc` / `validate_project` при отсутствии платы возвращают **SKIPPED** (это не PASS и не проверка разводки).
 
-У примера `projects/examples/mcp-test/mcp-test.kicad_pcb` уже есть **тестовая** плата: те же футпринты, что на схеме (F1, U1, R1, D1), контур 40×26 мм и простые дорожки. Это smoke для DRC и 2D/3D render, не заготовка под Gerber. Пересобрать её можно только через pcbnew KiCad 10:
+У примеров уже есть **тестовые** платы (smoke для DRC и 2D/3D render, не Gerber). Пересборка только через pcbnew KiCad 10:
 
 ```powershell
 & "C:\Program Files\KiCad\10.0\bin\python.exe" scripts\build_mcp_test_pcb.py
 uv run kicad-ai validate projects\examples\mcp-test
-uv run kicad-ai render-pcb projects\examples\mcp-test
-uv run kicad-ai render-3d projects\examples\mcp-test
+
+& "C:\Program Files\KiCad\10.0\bin\python.exe" scripts\build_oxy_pcb.py
+uv run kicad-ai validate projects\oxy\oxy
+uv run kicad-ai render-pcb projects\oxy\oxy
+uv run kicad-ai render-3d projects\oxy\oxy
 ```
+
+`mcp-test`: F1, U1, R1, D1, 40×26 мм. `oxy`: F1, J1/J2 (XH2.54), R1, D1, 55×30 мм, GND/GNDA разведены.
 
 Готовую к производству плату MCP не соберёт. Нормальный путь для своих проектов — KiCad GUI:
 

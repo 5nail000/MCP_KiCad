@@ -49,15 +49,42 @@ def test_mcp_test_has_example_pcb() -> None:
 
 
 def test_drc_skipped_when_project_has_no_pcb() -> None:
-    oxy = get_workspace() / OXY
-    assert oxy.is_dir()
-    assert not (oxy / "oxy.kicad_pcb").is_file()
-    report = validate_project(oxy)
+    ws = get_workspace()
+    sch_only = ws / "projects" / "user" / "sch-only-drc-skip"
+    sch_only.mkdir(parents=True, exist_ok=True)
+    oxy = ws / OXY
+    for name in ("oxy.kicad_sch", "oxy.kicad_pro"):
+        src = oxy / name
+        if src.is_file():
+            (sch_only / name).write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
+    # validate by schematic path (same dir, no .kicad_pcb)
+    report = validate_project(sch_only / "oxy.kicad_sch")
     drc = report["checks"]["drc"]
     assert drc["skipped"] is True
     assert drc["status"] == "SKIPPED"
     assert "no .kicad_pcb" in drc["reason"]
     assert drc["status"] != "PASS"
+
+
+def test_oxy_has_example_pcb() -> None:
+    pcb = get_workspace() / OXY / "oxy.kicad_pcb"
+    assert pcb.is_file()
+    text = pcb.read_text(encoding="utf-8", errors="replace")
+    assert "(kicad_pcb" in text
+    assert "Fuse:Fuse_0603_1608Metric" in text
+    assert "JST_XH_B2B-XH-A_1x02_P2.50mm_Vertical" in text
+    assert "Resistor_SMD:R_0603_1608Metric" in text
+    assert "LED_SMD:LED_0603_1608Metric" in text
+
+
+def test_validate_oxy_passes_erc_and_drc() -> None:
+    report = validate_project(get_workspace() / OXY)
+    assert report["verdict"] == "PASS"
+    assert report["checks"]["erc"]["status"] == "PASS"
+    drc = report["checks"]["drc"]
+    assert drc["skipped"] is False
+    assert drc["status"] == "PASS"
+    assert drc["violations"] == []
 
 
 def test_validate_mcp_test_passes_erc_and_drc() -> None:

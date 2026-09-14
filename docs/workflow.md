@@ -30,12 +30,11 @@
 
 ## Git
 
-Схема — инженерный артефакт:
+Каталог `projects/` в `.gitignore`: схемы и платы остаются локально, в репозиторий не коммитятся. Примеры создайте через `uv run kicad-ai example` или MCP `create_project`.
 
 ```powershell
 git status
 git diff
-git add projects/user/<name>
 ```
 
 Коммит создавайте только когда пользователь явно просит. `commit-message.txt` в `.gitignore` — для пушей по правилу репозитория.

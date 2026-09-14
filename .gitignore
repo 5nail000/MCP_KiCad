@@ -20,6 +20,7 @@ logs/
 cli.log
 backups/
 projects/user/smoke-tmp/
+projects/user/
 *.erc.json
 *.drc.json
 skidl_lab/generated/**

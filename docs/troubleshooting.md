@@ -29,7 +29,7 @@ KICAD_SYMBOL_DIR=C:\Program Files\KiCad\10.0\share\kicad\symbols
 
 Нужен `kicad-cli`. Схему нужно **сохранить** на диск до `run_erc` / `validate_project`. Если схемы открыты в GUI, возможны `.lck` — MCP предупредит, но не будет делать вид, что всё чисто.
 
-Нет `.kicad_pcb` — DRC возвращает `SKIPPED`, это не ошибка CLI и не успешная проверка платы. `render_pcb` / `render_pcb_3d` в том же случае тоже SKIPPED, без фейковой картинки. У примера mcp-test плата есть (`mcp-test.kicad_pcb`); у `projects/oxy/oxy` её нет — там DRC по-прежнему SKIPPED.
+Нет `.kicad_pcb` — DRC возвращает `SKIPPED`, это не ошибка CLI и не успешная проверка платы. `render_pcb` / `render_pcb_3d` в том же случае тоже SKIPPED, без фейковой картинки. Тестовые платы: `projects/examples/mcp-test/mcp-test.kicad_pcb`, `projects/oxy/oxy/oxy.kicad_pcb` (пересборка — `scripts/build_*_pcb.py`).
 
 ## Render пустой / старый
 
